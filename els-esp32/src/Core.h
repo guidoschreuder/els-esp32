@@ -115,14 +115,6 @@ inline void Core :: ISR( void )
         int32_t desiredSteps = feedRatio(spindlePosition);
         stepperDrive->setDesiredPosition(desiredSteps);
 
-        // // compensate for encoder overflow/underflow
-        // if( spindlePosition < previousSpindlePosition && previousSpindlePosition - spindlePosition > encoder->getMaxCount()/2 ) {
-        //     stepperDrive->incrementCurrentPosition(-1 * feedRatio(encoder->getMaxCount()));
-        // }
-        // if( spindlePosition > previousSpindlePosition && spindlePosition - previousSpindlePosition > encoder->getMaxCount()/2 ) {
-        //     stepperDrive->incrementCurrentPosition(feedRatio(encoder->getMaxCount()));
-        // }
-
         // if the feed or direction changed, reset sync to avoid a big step
         if( feed != previousFeed || feedDirection != previousFeedDirection) {
             stepperDrive->setCurrentPosition(desiredSteps);
