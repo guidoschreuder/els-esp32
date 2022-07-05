@@ -44,7 +44,7 @@ StepperDrive :: StepperDrive(void)
 void StepperDrive :: initHardware(void)
 {
     gpio_config_t io_conf_output = {
-        .pin_bit_mask = STEP_GPIO | DIRECTION_GPIO | ENABLE_GPIO,
+        .pin_bit_mask = (1ULL << STEP_GPIO) | (1ULL << DIRECTION_GPIO) | (1ULL << ENABLE_GPIO),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = gpio_pullup_t::GPIO_PULLUP_DISABLE,
         .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_DISABLE,
@@ -54,7 +54,7 @@ void StepperDrive :: initHardware(void)
     ESP_ERROR_CHECK(gpio_config(&io_conf_output));
 
     gpio_config_t io_conf_input = {
-        .pin_bit_mask = ALARM_GPIO,
+        .pin_bit_mask = (1ULL << ALARM_GPIO),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = gpio_pullup_t::GPIO_PULLUP_DISABLE,
         .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_DISABLE,

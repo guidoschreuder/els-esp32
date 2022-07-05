@@ -37,7 +37,7 @@ void Debug :: initHardware( void )
 {
   // set up GPIO pins as output for debugging
   gpio_config_t io_conf_debug = {
-      .pin_bit_mask = DEBUG1_GPIO | DEBUG2_GPIO,
+      .pin_bit_mask = (1ULL << DEBUG1_GPIO) | (1ULL << DEBUG2_GPIO),
       .mode = GPIO_MODE_OUTPUT,
       .pull_up_en = gpio_pullup_t::GPIO_PULLUP_DISABLE,
       .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_DISABLE,
