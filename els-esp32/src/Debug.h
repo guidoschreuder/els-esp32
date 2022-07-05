@@ -62,7 +62,7 @@ inline void Debug :: begin2( void )
 
 inline void Debug :: end2( void )
 {
-    gpio_set_level((gpio_num_t)DEBUG1_GPIO, 0);
+    gpio_set_level((gpio_num_t)DEBUG2_GPIO, 0);
 }
 
 
