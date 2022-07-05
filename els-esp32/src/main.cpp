@@ -118,6 +118,9 @@ void app_main()
     };
     esp_timer_handle_t service_timer;
     ESP_ERROR_CHECK(esp_timer_create(&service_timer_args, &service_timer));
+    // TODO: maximum frequency of ESP32 timer is 20kHz
+    // therefore we never reach to 200kHz required
+    //
     ESP_ERROR_CHECK(esp_timer_start_periodic(service_timer, STEPPER_CYCLE_US));
 }
 
