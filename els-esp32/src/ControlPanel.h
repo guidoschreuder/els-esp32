@@ -154,7 +154,8 @@ private:
     void decomposeRPM(void);
     void decomposeValue(void);
     KEY_REG readKeys(void);
-    uint8_t lcd_char(uint8_t x);
+    uint8_t reverse_byte(uint8_t);
+    uint8_t lcd_char(uint8_t);
     uint16_t receiveByte(void);
     void sendBrightness(void);
     void sendAutoIncrement(void);

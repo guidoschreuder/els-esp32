@@ -23,6 +23,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <string.h>
 #include <driver/gpio.h>
 #include <rom/ets_sys.h>
 
@@ -73,20 +74,29 @@ void ControlPanel :: initHardware(void)
 
   spi_device_interface_config_t devcfg = {
       .command_bits = 8,
-      .address_bits = 8,
+      .address_bits = 0,
       .dummy_bits = 0,
-      .mode = 0,                           // SPI mode 0
+      .mode = 3,                           // SPI mode 3
       .duty_cycle_pos = 0,                 // Use default of 50%
-      .cs_ena_pretrans = 0,                // TODO: might need to be tuned
+      .cs_ena_pretrans = 100,              // TODO: might need to be tuned
       .cs_ena_posttrans = 0,               // TODO: might need to be tuned
-      .clock_speed_hz = 10 * 1000 * 1000,  // Clock out at 10 MHz
-      .input_delay_ns = DELAY_BEFORE_READING_US * 1000,
+      .clock_speed_hz = 1 * 1000 * 1000,   // Clock out at 1 MHz
+      .input_delay_ns = 0,
       .spics_io_num = DISP_CS_GPIO,        // CS pin
       .flags = SPI_DEVICE_HALFDUPLEX | SPI_DEVICE_3WIRE,
       .queue_size = 1,
   };
   ret = spi_bus_add_device(DISP_SPI_HOST, &devcfg, &spi);
   ESP_ERROR_CHECK(ret);
+}
+
+uint8_t ControlPanel :: reverse_byte(uint8_t x) {
+
+  static uint8_t table[16] = {
+    0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+    0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf, };
+
+   return (table[x & 0b1111] << 4) | table[x >> 4];
 }
 
 uint8_t ControlPanel :: lcd_char(uint8_t x)
@@ -116,27 +126,27 @@ void ControlPanel :: sendBrightness() {
         briteVal = 0x87 + this->brightness;
     }
 
-    spi_transaction_t t = {
-        .cmd = briteVal,
-    };
-    esp_err_t ret = spi_device_polling_transmit(this->spi, &t);
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));       //Zero out the transaction
+    t.cmd = reverse_byte(briteVal);
+
+    esp_err_t ret = spi_device_polling_transmit(this->spi, (spi_transaction_t*) &t);
     ESP_ERROR_CHECK(ret);
 }
 
 void ControlPanel :: sendAutoIncrement() {
-    spi_transaction_t t = {
-        .cmd = CMD_AUTO_INCR,
-    };
-    esp_err_t ret = spi_device_polling_transmit(this->spi, &t);
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));       //Zero out the transaction
+    t.cmd = reverse_byte(CMD_AUTO_INCR);
+
+    esp_err_t ret = spi_device_polling_transmit(this->spi, (spi_transaction_t*) &t);
     ESP_ERROR_CHECK(ret);
 }
 
 void ControlPanel :: sendLeds() {
-    uint16_t ledMask = this->leds.all;
-    uint8_t data[17];
+    uint8_t ledMask = this->leds.all;
+    uint8_t data[16];
     uint8_t ind = 0;
-
-    data[ind++] = START_LOCATION;
 
     for (int i = 0; i < 8; i++) {
       if (this->message != NULL) {
@@ -144,15 +154,17 @@ void ControlPanel :: sendLeds() {
       } else {
         data[ind++] = this->sevenSegmentData[i];
       }
-      data[ind++] = (ledMask & 0x80) ? 0xff00 : 0x0000;
+      data[ind++] = (ledMask & 0x80) ? 0x80 : 0x00;
       ledMask <<= 1;
     }
 
-    spi_transaction_t t = {
-        .length = sizeof(data),
-        .tx_buffer = data,
-    };
-    esp_err_t ret = spi_device_polling_transmit(this->spi, &t);
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));       //Zero out the transaction
+    t.cmd = reverse_byte(START_LOCATION),
+    t.length = (size_t)8 * ind;
+    t.tx_buffer = data;
+
+    esp_err_t ret = spi_device_polling_transmit(this->spi, (spi_transaction_t*) &t);
     ESP_ERROR_CHECK(ret);
 
 }
@@ -189,11 +201,14 @@ void ControlPanel :: decomposeValue()
 
 KEY_REG ControlPanel :: readKeys(void)
 {
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_RXDATA,
-        .cmd = CMD_READ_KEYS,
-        .rxlength = 32,
-    };
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));       //Zero out the transaction
+    t.flags = SPI_TRANS_USE_RXDATA;
+    t.cmd = CMD_READ_KEYS;
+    t.rxlength = 32;
+
+    esp_err_t ret = spi_device_polling_transmit(this->spi, &t);
+    ESP_ERROR_CHECK(ret);
 
     KEY_REG keyMask;
     keyMask.all =

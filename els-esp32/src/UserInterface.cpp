@@ -161,8 +161,6 @@ void UserInterface :: loop( void )
     // read the RPM up front so we can use it to make decisions
     uint16_t currentRpm = core->getRPM();
 
-    printf("RPM: %d\n", currentRpm);
-
     // display an override message, if there is one
     overrideMessage();
 
