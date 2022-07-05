@@ -28,18 +28,28 @@
 #define __CONFIGURATION_H
 
 
+#define DISP_SPI_HOST    HSPI_HOST
+
 //================================================================================
 //                                  PINS
-// TODO: pinnumbers are from original code: remap for ESP32
-#define ENCODER_A_GPIO  35
-#define ENCODER_B_GPIO  37
-#define DISPLAY_CS_GPIO 33
-#define STEP_GPIO       0
-#define DIRECTION_GPIO  1
-#define ENABLE_GPIO     6
-#define ALARM_GPIO      7
-#define DEBUG1_GPIO     2
-#define DEBUG2_GPIO     3
+// debug pins
+#define DEBUG1_GPIO     26
+#define DEBUG2_GPIO     27
+
+// encoder pins
+#define ENCODER_A_GPIO  19
+#define ENCODER_B_GPIO  18
+
+// stepper pins
+#define STEP_GPIO       21
+#define DIRECTION_GPIO  22
+#define ENABLE_GPIO     23
+#define ALARM_GPIO      25
+
+// control panel pins
+#define DISP_MOSI_GPIO  13
+#define DISP_CLK_GPIO   14
+#define DISP_CS_GPIO    15
 
 
 

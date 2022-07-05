@@ -27,50 +27,50 @@
 #ifndef __CONTROL_PANEL_H
 #define __CONTROL_PANEL_H
 
-#include "SPIBus.h"
+#include <driver/spi_master.h>
 
 
-#define ZERO    0b1111110000000000 // 0
-#define ONE     0b0110000000000000 // 1
-#define TWO     0b1101101000000000 // 2
-#define THREE   0b1111001000000000 // 3
-#define FOUR    0b0110011000000000 // 4
-#define FIVE    0b1011011000000000 // 5
-#define SIX     0b1011111000000000 // 6
-#define SEVEN   0b1110000000000000 // 7
-#define EIGHT   0b1111111000000000 // 8
-#define NINE    0b1111011000000000 // 9
-#define POINT   0b0000000100000000 // .
-#define BLANK   0b0000000000000000
+#define ZERO    0b11111100 // 0
+#define ONE     0b01100000 // 1
+#define TWO     0b11011010 // 2
+#define THREE   0b11110010 // 3
+#define FOUR    0b01100110 // 4
+#define FIVE    0b10110110 // 5
+#define SIX     0b10111110 // 6
+#define SEVEN   0b11100000 // 7
+#define EIGHT   0b11111110 // 8
+#define NINE    0b11110110 // 9
+#define POINT   0b00000001 // .
+#define BLANK   0b00000000
 
-#define LETTER_A 0b1110111000000000
-#define LETTER_B 0b0011111000000000
-#define LETTER_C 0b1001110000000000
-#define LETTER_D 0b0111101000000000
-#define LETTER_E 0b1001111000000000
-#define LETTER_F 0b1000111000000000
-#define LETTER_G 0b1011110000000000
-#define LETTER_H 0b0110111000000000
-#define LETTER_I 0b0000110000000000
-#define LETTER_J 0b0111100000000000
-#define LETTER_K 0b1010111000000000
-#define LETTER_L 0b0001110000000000
-#define LETTER_M 0b1010100000000000
-#define LETTER_N 0b1110110000000000
-#define LETTER_O 0b1111110000000000
-#define LETTER_P 0b1100111000000000
-#define LETTER_Q 0b1110011000000000
-#define LETTER_R 0b1100110000000000
-#define LETTER_S 0b1011011000000000
-#define LETTER_T 0b0001111000000000
-#define LETTER_U 0b0111110000000000
-#define LETTER_V 0b0111010000000000
-#define LETTER_W 0b0101010000000000
-#define LETTER_X 0b0110110000000000
-#define LETTER_Y 0b0111011000000000
-#define LETTER_Z 0b1101001000000000
+#define LETTER_A 0b11101110
+#define LETTER_B 0b00111110
+#define LETTER_C 0b10011100
+#define LETTER_D 0b01111010
+#define LETTER_E 0b10011110
+#define LETTER_F 0b10001110
+#define LETTER_G 0b10111100
+#define LETTER_H 0b01101110
+#define LETTER_I 0b00001100
+#define LETTER_J 0b01111000
+#define LETTER_K 0b10101110
+#define LETTER_L 0b00011100
+#define LETTER_M 0b10101000
+#define LETTER_N 0b11101100
+#define LETTER_O 0b11111100
+#define LETTER_P 0b11001110
+#define LETTER_Q 0b11100110
+#define LETTER_R 0b11001100
+#define LETTER_S 0b10110110
+#define LETTER_T 0b00011110
+#define LETTER_U 0b01111100
+#define LETTER_V 0b01110100
+#define LETTER_W 0b01010100
+#define LETTER_X 0b01101100
+#define LETTER_Y 0b01110110
+#define LETTER_Z 0b11010010
 
-#define DASH 0b0000001000000000
+#define DASH 0b00000010
 
 #define LED_TPI 1
 #define LED_INCH (1<<1)
@@ -121,8 +121,7 @@ typedef union KEY_REG
 class ControlPanel
 {
 private:
-    // Common SPI Bus
-    SPIBus *spiBus;
+    spi_device_handle_t spi;
 
     // Current RPM value; 4 decimal digits
     uint16_t rpm;
@@ -155,18 +154,17 @@ private:
     void decomposeRPM(void);
     void decomposeValue(void);
     KEY_REG readKeys(void);
-    uint16_t lcd_char(uint16_t x);
-    void sendByte(uint16_t data);
+    uint8_t lcd_char(uint8_t x);
     uint16_t receiveByte(void);
+    void sendBrightness(void);
+    void sendAutoIncrement(void);
+    void sendLeds(void);
     void sendData(void);
-    uint16_t reverse_byte(uint16_t x);
-    void initSpi();
-    void configureSpiBus(void);
     bool isValidKeyState(KEY_REG);
     bool isStable(KEY_REG);
 
 public:
-    ControlPanel(SPIBus *spiBus);
+    ControlPanel();
 
     // initialize the hardware for operation
     void initHardware(void);

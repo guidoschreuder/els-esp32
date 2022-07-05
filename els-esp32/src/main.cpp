@@ -57,11 +57,8 @@ Debug debug;
 // Feed table factory
 FeedTableFactory feedTableFactory;
 
-// Common SPI Bus driver
-SPIBus spiBus;
-
 // Control Panel driver
-ControlPanel controlPanel(&spiBus);
+ControlPanel controlPanel;
 
 // Encoder driver
 Encoder encoder;
@@ -103,13 +100,14 @@ void app_main()
 {
     // Initialize peripherals and pins
     debug.initHardware();
-    spiBus.initHardware();
     controlPanel.initHardware();
     stepperDrive.initHardware();
     encoder.initHardware();
 
+    // create UI task
     xTaskCreate(&ui_task, "ui_task", 2048, NULL, 4, NULL);
 
+    // create core service timer
     const esp_timer_create_args_t service_timer_args = {
             .callback = &core_service_timer_isr,
             /* name is optional, but may help identify the timer when debugging */

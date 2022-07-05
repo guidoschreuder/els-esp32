@@ -38,17 +38,12 @@
 // Number of times a key state must be read consecutively to be considered stable
 #define MIN_CONSECUTIVE_READS 3
 
+#define CMD_AUTO_INCR 0x40
+#define CMD_READ_KEYS 0x42
+#define START_LOCATION 0xc0
 
-// Lower the TM1638 CS (STB) line
-#define CS_ASSERT gpio_set_level((gpio_num_t)DISPLAY_CS_GPIO, 0)
-
-// Raise the TM1638 CS (STB) line
-#define CS_RELEASE gpio_set_level((gpio_num_t)DISPLAY_CS_GPIO, 1)
-
-
-ControlPanel :: ControlPanel(SPIBus *spiBus)
+ControlPanel :: ControlPanel()
 {
-    this->spiBus = spiBus;
     this->rpm = 0;
     this->value = NULL;
     this->leds.all = 0;
@@ -61,78 +56,53 @@ ControlPanel :: ControlPanel(SPIBus *spiBus)
 
 void ControlPanel :: initHardware(void)
 {
+  esp_err_t ret;
 
-  gpio_config_t io_conf = {
-      .pin_bit_mask = DISPLAY_CS_GPIO,
-      .mode = GPIO_MODE_OUTPUT,
-      .pull_up_en = gpio_pullup_t::GPIO_PULLUP_DISABLE,
-      .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_DISABLE,
-      .intr_type = GPIO_INTR_DISABLE,
+  spi_bus_config_t buscfg = {
+      .mosi_io_num = DISP_MOSI_GPIO,
+      .miso_io_num = -1,
+      .sclk_io_num = DISP_CLK_GPIO,
+      .quadwp_io_num = -1,
+      .quadhd_io_num = -1,
+      .max_transfer_sz = 32,  // this should be more than edequate
+      .flags = SPICOMMON_BUSFLAG_GPIO_PINS,
+      .intr_flags = 0,
   };
+  ret = spi_bus_initialize(DISP_SPI_HOST, &buscfg, SPI_DMA_DISABLED);
+  ESP_ERROR_CHECK(ret);
 
-  ESP_ERROR_CHECK(gpio_config(&io_conf));
+  spi_device_interface_config_t devcfg = {
+      .command_bits = 8,
+      .address_bits = 8,
+      .dummy_bits = 0,
+      .mode = 0,                           // SPI mode 0
+      .duty_cycle_pos = 0,                 // Use default of 50%
+      .cs_ena_pretrans = 0,                // TODO: might need to be tuned
+      .cs_ena_posttrans = 0,               // TODO: might need to be tuned
+      .clock_speed_hz = 10 * 1000 * 1000,  // Clock out at 10 MHz
+      .input_delay_ns = DELAY_BEFORE_READING_US * 1000,
+      .spics_io_num = DISP_CS_GPIO,        // CS pin
+      .flags = SPI_DEVICE_HALFDUPLEX | SPI_DEVICE_3WIRE,
+      .queue_size = 1,
+  };
+  ret = spi_bus_add_device(DISP_SPI_HOST, &devcfg, &spi);
+  ESP_ERROR_CHECK(ret);
 }
 
-void ControlPanel :: configureSpiBus( void )
+uint8_t ControlPanel :: lcd_char(uint8_t x)
 {
-    // configure the shared bus
-    this->spiBus->setThreeWire();
-    this->spiBus->setEightBits();
-}
-
-uint16_t ControlPanel :: reverse_byte(uint16_t x)
-{
-    static const uint16_t table[] = {
-        0x0000, 0x8000, 0x4000, 0xc000, 0x2000, 0xa000, 0x6000, 0xe000,
-        0x1000, 0x9000, 0x5000, 0xd000, 0x3000, 0xb000, 0x7000, 0xf000,
-        0x0800, 0x8800, 0x4800, 0xc800, 0x2800, 0xa800, 0x6800, 0xe800,
-        0x1800, 0x9800, 0x5800, 0xd800, 0x3800, 0xb800, 0x7800, 0xf800,
-        0x0400, 0x8400, 0x4400, 0xc400, 0x2400, 0xa400, 0x6400, 0xe400,
-        0x1400, 0x9400, 0x5400, 0xd400, 0x3400, 0xb400, 0x7400, 0xf400,
-        0x0c00, 0x8c00, 0x4c00, 0xcc00, 0x2c00, 0xac00, 0x6c00, 0xec00,
-        0x1c00, 0x9c00, 0x5c00, 0xdc00, 0x3c00, 0xbc00, 0x7c00, 0xfc00,
-        0x0200, 0x8200, 0x4200, 0xc200, 0x2200, 0xa200, 0x6200, 0xe200,
-        0x1200, 0x9200, 0x5200, 0xd200, 0x3200, 0xb200, 0x7200, 0xf200,
-        0x0a00, 0x8a00, 0x4a00, 0xca00, 0x2a00, 0xaa00, 0x6a00, 0xea00,
-        0x1a00, 0x9a00, 0x5a00, 0xda00, 0x3a00, 0xba00, 0x7a00, 0xfa00,
-        0x0600, 0x8600, 0x4600, 0xc600, 0x2600, 0xa600, 0x6600, 0xe600,
-        0x1600, 0x9600, 0x5600, 0xd600, 0x3600, 0xb600, 0x7600, 0xf600,
-        0x0e00, 0x8e00, 0x4e00, 0xce00, 0x2e00, 0xae00, 0x6e00, 0xee00,
-        0x1e00, 0x9e00, 0x5e00, 0xde00, 0x3e00, 0xbe00, 0x7e00, 0xfe00,
-        0x0100, 0x8100, 0x4100, 0xc100, 0x2100, 0xa100, 0x6100, 0xe100,
-        0x1100, 0x9100, 0x5100, 0xd100, 0x3100, 0xb100, 0x7100, 0xf100,
-        0x0900, 0x8900, 0x4900, 0xc900, 0x2900, 0xa900, 0x6900, 0xe900,
-        0x1900, 0x9900, 0x5900, 0xd900, 0x3900, 0xb900, 0x7900, 0xf900,
-        0x0500, 0x8500, 0x4500, 0xc500, 0x2500, 0xa500, 0x6500, 0xe500,
-        0x1500, 0x9500, 0x5500, 0xd500, 0x3500, 0xb500, 0x7500, 0xf500,
-        0x0d00, 0x8d00, 0x4d00, 0xcd00, 0x2d00, 0xad00, 0x6d00, 0xed00,
-        0x1d00, 0x9d00, 0x5d00, 0xdd00, 0x3d00, 0xbd00, 0x7d00, 0xfd00,
-        0x0300, 0x8300, 0x4300, 0xc300, 0x2300, 0xa300, 0x6300, 0xe300,
-        0x1300, 0x9300, 0x5300, 0xd300, 0x3300, 0xb300, 0x7300, 0xf300,
-        0x0b00, 0x8b00, 0x4b00, 0xcb00, 0x2b00, 0xab00, 0x6b00, 0xeb00,
-        0x1b00, 0x9b00, 0x5b00, 0xdb00, 0x3b00, 0xbb00, 0x7b00, 0xfb00,
-        0x0700, 0x8700, 0x4700, 0xc700, 0x2700, 0xa700, 0x6700, 0xe700,
-        0x1700, 0x9700, 0x5700, 0xd700, 0x3700, 0xb700, 0x7700, 0xf700,
-        0x0f00, 0x8f00, 0x4f00, 0xcf00, 0x2f00, 0xaf00, 0x6f00, 0xef00,
-        0x1f00, 0x9f00, 0x5f00, 0xdf00, 0x3f00, 0xbf00, 0x7f00, 0xff00,
-    };
-    return table[x];
-}
-
-uint16_t ControlPanel :: lcd_char(uint16_t x)
-{
-    static const uint16_t table[] = {
-        0b1111110000000000, // 0
-        0b0110000000000000, // 1
-        0b1101101000000000, // 2
-        0b1111001000000000, // 3
-        0b0110011000000000, // 4
-        0b1011011000000000, // 5
-        0b1011111000000000, // 6
-        0b1110000000000000, // 7
-        0b1111111000000000, // 8
-        0b1111011000000000, // 9
-        0b0000000100000000  // .
+    static const uint8_t table[] = {
+        ZERO,
+        ONE,
+        TWO,
+        THREE,
+        FOUR,
+        FIVE,
+        SIX,
+        SEVEN,
+        EIGHT,
+        NINE,
+        POINT
     };
     if( x < sizeof(table) ) {
         return table[x];
@@ -140,43 +110,58 @@ uint16_t ControlPanel :: lcd_char(uint16_t x)
     return table[sizeof(table)-1];
 }
 
-void ControlPanel :: sendData()
-{
-    int i;
-    uint16_t ledMask = this->leds.all;
+void ControlPanel :: sendBrightness() {
     uint16_t briteVal = 0x80;
     if( this->brightness > 0 ) {
         briteVal = 0x87 + this->brightness;
     }
 
-    CS_ASSERT;
-    spiBus->sendWord(reverse_byte(briteVal));       // brightness
-    CS_RELEASE;
-    ets_delay_us(CS_RISE_TIME_US);              // give CS line time to register high
+    spi_transaction_t t = {
+        .cmd = briteVal,
+    };
+    esp_err_t ret = spi_device_polling_transmit(this->spi, &t);
+    ESP_ERROR_CHECK(ret);
+}
 
-    CS_ASSERT;
-    spiBus->sendWord(reverse_byte(0x40));           // auto-increment
-    CS_RELEASE;
-    ets_delay_us(CS_RISE_TIME_US);              // give CS line time to register high
+void ControlPanel :: sendAutoIncrement() {
+    spi_transaction_t t = {
+        .cmd = CMD_AUTO_INCR,
+    };
+    esp_err_t ret = spi_device_polling_transmit(this->spi, &t);
+    ESP_ERROR_CHECK(ret);
+}
 
-    CS_ASSERT;
-    spiBus->sendWord(reverse_byte(0xc0));           // display data
-    for( i=0; i < 8; i++ ) {
-        if( this->message != NULL )
-        {
-            spiBus->sendWord(this->message[i]);
-        }
-        else
-        {
-            spiBus->sendWord(this->sevenSegmentData[i]);
-        }
-        spiBus->sendWord( (ledMask & 0x80) ? 0xff00 : 0x0000 );
-        ledMask <<= 1;
+void ControlPanel :: sendLeds() {
+    uint16_t ledMask = this->leds.all;
+    uint8_t data[17];
+    uint8_t ind = 0;
+
+    data[ind++] = START_LOCATION;
+
+    for (int i = 0; i < 8; i++) {
+      if (this->message != NULL) {
+        data[ind++] = this->message[i];
+      } else {
+        data[ind++] = this->sevenSegmentData[i];
+      }
+      data[ind++] = (ledMask & 0x80) ? 0xff00 : 0x0000;
+      ledMask <<= 1;
     }
-    CS_RELEASE;
-    ets_delay_us(CS_RISE_TIME_US);              // give CS line time to register high
 
-    // TODO: UNPORTED SpibRegs.SPICTL.bit.TALK = 0;
+    spi_transaction_t t = {
+        .length = sizeof(data),
+        .tx_buffer = data,
+    };
+    esp_err_t ret = spi_device_polling_transmit(this->spi, &t);
+    ESP_ERROR_CHECK(ret);
+
+}
+
+void ControlPanel :: sendData()
+{
+    sendBrightness();
+    sendAutoIncrement();
+    sendLeds();
 }
 
 void ControlPanel :: decomposeRPM()
@@ -204,34 +189,18 @@ void ControlPanel :: decomposeValue()
 
 KEY_REG ControlPanel :: readKeys(void)
 {
-    // TODO: UNPORTED SpibRegs.SPICTL.bit.TALK = 1;
-
-    CS_ASSERT;
-    spiBus->sendWord(reverse_byte(0x40));           // auto-increment
-    CS_RELEASE;
-    ets_delay_us(CS_RISE_TIME_US);              // give CS line time to register high
-
-    CS_ASSERT;
-    spiBus->sendWord(reverse_byte(0x42));
-
-    // TODO: UNPORTED SpibRegs.SPICTL.bit.TALK = 0;
-
-    ets_delay_us(DELAY_BEFORE_READING_US); // delay required by TM1638 per datasheet
-
-    uint16_t byte1 = spiBus->receiveWord();
-    uint16_t byte2 = spiBus->receiveWord();
-    uint16_t byte3 = spiBus->receiveWord();
-    uint16_t byte4 = spiBus->receiveWord();
+    spi_transaction_t t = {
+        .flags = SPI_TRANS_USE_RXDATA,
+        .cmd = CMD_READ_KEYS,
+        .rxlength = 32,
+    };
 
     KEY_REG keyMask;
     keyMask.all =
-            (byte1 & 0x88) |
-            (byte2 & 0x88) >> 1 |
-            (byte3 & 0x88) >> 2 |
-            (byte4 & 0x88) >> 3;
-
-    CS_RELEASE;
-    ets_delay_us(CS_RISE_TIME_US);              // give CS line time to register high
+            (t.rx_data[0] & 0x88) |
+            (t.rx_data[1] & 0x88) >> 1 |
+            (t.rx_data[2] & 0x88) >> 2 |
+            (t.rx_data[3] & 0x88) >> 3;
 
     return keyMask;
 }
@@ -240,8 +209,6 @@ KEY_REG ControlPanel :: getKeys()
 {
     KEY_REG newKeys;
     static KEY_REG noKeys;
-
-    configureSpiBus();
 
     newKeys = readKeys();
     if( isValidKeyState(newKeys) && isStable(newKeys) && newKeys.all != this->keys.all ) {
@@ -305,8 +272,6 @@ void ControlPanel :: setBrightness( uint16_t brightness )
 
 void ControlPanel :: refresh()
 {
-    configureSpiBus();
-
     decomposeRPM();
     decomposeValue();
 
