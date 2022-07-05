@@ -40,7 +40,7 @@ void Debug :: initHardware( void )
       .pin_bit_mask = (1ULL << DEBUG1_GPIO) | (1ULL << DEBUG2_GPIO),
       .mode = GPIO_MODE_OUTPUT,
       .pull_up_en = gpio_pullup_t::GPIO_PULLUP_DISABLE,
-      .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_DISABLE,
+      .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_ENABLE,
       .intr_type = GPIO_INTR_DISABLE,
   };
 
