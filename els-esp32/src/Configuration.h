@@ -136,7 +136,7 @@
 //================================================================================
 
 // Use floating-point math for gear ratios
-#define USE_FLOATING_POINT
+//#define USE_FLOATING_POINT
 
 
 
