@@ -72,12 +72,12 @@ private:
     //
     // Current position of the motor, in steps
     //
-    int32_t currentPosition;
+    int64_t currentPosition;
 
     //
     // Desired position of the motor, in steps
     //
-    int32_t desiredPosition;
+    int64_t desiredPosition;
 
     //
     // current state-machine state
@@ -95,9 +95,9 @@ public:
     StepperDrive();
     void initHardware(void);
 
-    void setDesiredPosition(int32_t steps);
-    void incrementCurrentPosition(int32_t increment);
-    void setCurrentPosition(int32_t position);
+    void setDesiredPosition(int64_t);
+    void incrementCurrentPosition(int32_t);
+    void setCurrentPosition(int64_t);
 
     bool checkStepBacklog();
 
@@ -108,7 +108,7 @@ public:
     void ISR(void);
 };
 
-inline void StepperDrive :: setDesiredPosition(int32_t steps)
+inline void StepperDrive :: setDesiredPosition(int64_t steps)
 {
     this->desiredPosition = steps;
 }
@@ -118,7 +118,7 @@ inline void StepperDrive :: incrementCurrentPosition(int32_t increment)
     this->currentPosition += increment;
 }
 
-inline void StepperDrive :: setCurrentPosition(int32_t position)
+inline void StepperDrive :: setCurrentPosition(int64_t position)
 {
     this->currentPosition = position;
 }

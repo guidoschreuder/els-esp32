@@ -54,7 +54,7 @@ private:
 
     uint32_t previousSpindlePosition;
 
-    int32_t feedRatio(uint32_t count);
+    int32_t feedRatio(int64_t);
 
     bool powerOn;
 
@@ -96,7 +96,7 @@ inline bool Core :: isPowerOn()
     return this->powerOn;
 }
 
-inline int32_t Core :: feedRatio(uint32_t count)
+inline int32_t Core :: feedRatio(int64_t count)
 {
 #ifdef USE_FLOATING_POINT
     return ((float)count) * this->feed * feedDirection;
@@ -109,7 +109,7 @@ inline void Core :: ISR( void )
 {
     if( this->feed != NULL_FEED ) {
         // read the encoder
-        uint32_t spindlePosition = encoder->getPosition();
+        int64_t spindlePosition = encoder->getPosition();
 
         // calculate the desired stepper position
         int32_t desiredSteps = feedRatio(spindlePosition);

@@ -35,8 +35,8 @@
 class Encoder
 {
 private:
-    uint64_t previous;
-    uint64_t previous_us;
+    int64_t previous;
+    int64_t previous_us;
     uint16_t rpm;
     ESP32Encoder encoder;
 
@@ -45,11 +45,11 @@ public:
     void initHardware( void );
 
     uint16_t getRPM( void );
-    uint32_t getPosition( void );
+    int64_t getPosition( void );
 };
 
 
-inline uint32_t Encoder :: getPosition(void)
+inline int64_t Encoder :: getPosition(void)
 {
     return encoder.getCount();
 }

@@ -46,8 +46,8 @@ uint16_t Encoder :: getRPM(void)
     int64_t current_us = esp_timer_get_time();
 
     if (current_us > previous_us + (1000000 / RPM_CALC_RATE_HZ)) {
-      uint64_t current = encoder.getCount();
-      uint64_t count = (current > previous) ? current - previous : previous - current;
+      int64_t current = encoder.getCount();
+      int64_t count = (current > previous) ? current - previous : previous - current;
 
       rpm = count * 60 * RPM_CALC_RATE_HZ / ENCODER_RESOLUTION;
 
