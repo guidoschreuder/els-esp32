@@ -40,10 +40,6 @@
 #error RPM_CALC_RATE_HZ must be between 1Hz and 10Hz
 #endif
 
-#if CPU_CLOCK_HZ < 1000000 || CPU_CLOCK_HZ > 500000000
-#error CPU_CLOCK_HZ must be between 1MHz and 500MHz
-#endif
-
 #if STEPPER_MICROSTEPS < 1 || STEPPER_MICROSTEPS > 256
 #error STEPPER_MICROSTEPS must be between 1 and 256
 #endif

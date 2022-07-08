@@ -199,9 +199,4 @@
 // RPM recalculation rate, in Hz
 #define RPM_CALC_RATE_HZ 2
 
-// Microprocessor system clock
-#define CPU_CLOCK_MHZ 100
-#define CPU_CLOCK_HZ (CPU_CLOCK_MHZ * 1000000)
-
-
 #endif // __CONFIGURATION_H
