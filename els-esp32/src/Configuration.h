@@ -189,6 +189,9 @@
 // to touch these settings.
 //================================================================================
 
+// Frequency of main control loop
+#define CONTROL_FREQ_HZ 20000
+
 // Stepper state machine cycle time, in microseconds
 // Two cycles are required per step
 #define STEPPER_CYCLE_US 5

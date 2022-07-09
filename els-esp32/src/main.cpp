@@ -25,8 +25,8 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "esp_timer.h"
 #include "esp_err.h"
+#include "driver/timer.h"
 
 #include "Configuration.h"
 #include "SanityCheck.h"
@@ -42,8 +42,6 @@
 extern "C" {
 void app_main();
 }
-
-void core_service_timer_isr(void* args);
 
 //
 // DEPENDENCY INJECTION
@@ -72,6 +70,30 @@ Core core(&encoder, &stepperDrive);
 // User interface
 UserInterface userInterface(&controlPanel, &core, &feedTableFactory);
 
+static TaskHandle_t core_service_task_handle;
+
+static bool IRAM_ATTR core_service_timer_isr_callback(void* args) {
+    BaseType_t high_task_awoken = pdFALSE;
+    vTaskNotifyGiveFromISR(core_service_task_handle, &high_task_awoken);
+    return high_task_awoken == pdTRUE;
+}
+
+void core_service_task(void *pvParameter) {
+    for (;;) {
+        // if(xSemaphoreTake(timer_sem, portMAX_DELAY) == pdTRUE) {
+        if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
+            // flag entrance to ISR for timing
+            debug.begin1();
+
+            // service the Core engine ISR, which in turn services the StepperDrive ISR
+            core.ISR();
+
+            // flag exit from ISR for timing
+            debug.end1();
+        }
+    }
+}
+
 void ui_task(void *pvParameter) {
     // User interface loop
     for(;;) {
@@ -95,6 +117,7 @@ void ui_task(void *pvParameter) {
 
 }
 
+#define TIMER_DIVIDER (16)
 
 void app_main()
 {
@@ -107,32 +130,24 @@ void app_main()
     // create UI task
     xTaskCreate(&ui_task, "ui_task", 2048, NULL, 4, NULL);
 
-    // create core service timer
-    const esp_timer_create_args_t service_timer_args = {
-            .callback = &core_service_timer_isr,
-            /* name is optional, but may help identify the timer when debugging */
-            .arg = NULL,
-            .dispatch_method = esp_timer_dispatch_t::ESP_TIMER_TASK,
-            .name = "core service",
-            .skip_unhandled_events = true,
-    };
-    esp_timer_handle_t service_timer;
-    ESP_ERROR_CHECK(esp_timer_create(&service_timer_args, &service_timer));
-    // TODO: maximum frequency of ESP32 timer is 20kHz
-    // therefore we never reach to 200kHz required
-    //
-    ESP_ERROR_CHECK(esp_timer_start_periodic(service_timer, STEPPER_CYCLE_US));
-}
+    // create core service task
+    xTaskCreatePinnedToCore(core_service_task, "core_service_task", 4096, NULL, configMAX_PRIORITIES - 1, &core_service_task_handle, APP_CPU_NUM);
 
-void IRAM_ATTR core_service_timer_isr(void* args)
-{
-    // flag entrance to ISR for timing
-    debug.begin1();
+    // create core service hardware timer
+    timer_config_t config = {
+        .alarm_en = TIMER_ALARM_EN,
+        .counter_en = TIMER_PAUSE,
+        .counter_dir = TIMER_COUNT_UP,
+        .auto_reload = timer_autoreload_t::TIMER_AUTORELOAD_EN,
+        .divider = TIMER_DIVIDER,
+    }; // default clock source is APB
+    timer_init(TIMER_GROUP_0, TIMER_0, &config);
+    timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
 
-    // service the Core engine ISR, which in turn services the StepperDrive ISR
-    core.ISR();
+    timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, TIMER_BASE_CLK / TIMER_DIVIDER / CONTROL_FREQ_HZ);
+    timer_enable_intr(TIMER_GROUP_0, TIMER_0);
 
-    // flag exit from ISR for timing
-    debug.end1();
+    timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, core_service_timer_isr_callback, NULL, 0);
 
+    timer_start(TIMER_GROUP_0, TIMER_0);
 }
