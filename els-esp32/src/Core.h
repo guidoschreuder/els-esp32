@@ -52,9 +52,9 @@ private:
     int16_t feedDirection;
     int16_t previousFeedDirection;
 
-    uint32_t previousSpindlePosition;
+    int64_t previousSpindlePosition;
 
-    int32_t feedRatio(int64_t);
+    int64_t feedRatio(int64_t);
 
     bool powerOn;
 
@@ -96,7 +96,7 @@ inline bool Core :: isPowerOn()
     return this->powerOn;
 }
 
-inline int32_t Core :: feedRatio(int64_t count)
+inline int64_t Core :: feedRatio(int64_t count)
 {
 #ifdef USE_FLOATING_POINT
     return ((float)count) * this->feed * feedDirection;
@@ -112,7 +112,7 @@ inline void Core :: ISR( void )
         int64_t spindlePosition = encoder->getPosition();
 
         // calculate the desired stepper position
-        int32_t desiredSteps = feedRatio(spindlePosition);
+        int64_t desiredSteps = feedRatio(spindlePosition);
         stepperDrive->setDesiredPosition(desiredSteps);
 
         // if the feed or direction changed, reset sync to avoid a big step
