@@ -35,7 +35,6 @@ Core :: Core( Encoder *encoder, StepperDrive *stepperDrive )
     this->feed = NULL_FEED;
     this->feedDirection = 0;
 
-    this->previousSpindlePosition = 0;
     this->previousFeedDirection = 0;
     this->previousFeed = NULL_FEED;
 

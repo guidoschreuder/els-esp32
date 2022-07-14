@@ -52,8 +52,6 @@ private:
     int16_t feedDirection;
     int16_t previousFeedDirection;
 
-    int64_t previousSpindlePosition;
-
     int64_t feedRatio(int64_t);
 
     bool powerOn;
@@ -121,7 +119,6 @@ inline void Core :: ISR( void )
         }
 
         // remember values for next time
-        previousSpindlePosition = spindlePosition;
         previousFeedDirection = feedDirection;
         previousFeed = feed;
 
