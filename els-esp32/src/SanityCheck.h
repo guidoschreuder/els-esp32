@@ -28,8 +28,8 @@
 
 // Sanity checks to check for common configuration errors
 
-#if STEPPER_CYCLE_US < 5 || STEPPER_CYCLE_US > 100
-#error STEPPER_CYCLE_US must be between 5ms and 100ms
+#if STEPPER_CYCLE_US < 2 || STEPPER_CYCLE_US > 100
+#error STEPPER_CYCLE_US must be between 5us and 100us
 #endif
 
 #if UI_REFRESH_RATE_HZ < 3 || UI_REFRESH_RATE_HZ > 100
