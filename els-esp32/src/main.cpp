@@ -43,6 +43,9 @@ extern "C" {
 void app_main();
 }
 
+
+static TaskHandle_t core_service_task_handle;
+
 //
 // DEPENDENCY INJECTION
 //
@@ -62,15 +65,13 @@ ControlPanel controlPanel;
 Encoder encoder;
 
 // Stepper driver
-StepperDrive stepperDrive;
+StepperDrive stepperDrive(&core_service_task_handle);
 
 // Core engine
 Core core(&encoder, &stepperDrive);
 
 // User interface
 UserInterface userInterface(&controlPanel, &core, &feedTableFactory);
-
-static TaskHandle_t core_service_task_handle;
 
 static bool IRAM_ATTR core_service_timer_isr_callback(void* args) {
     BaseType_t high_task_awoken = pdFALSE;

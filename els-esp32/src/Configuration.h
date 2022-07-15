@@ -104,6 +104,8 @@
 // Enable servo alarm feedback
 #define USE_ALARM_GPIO
 
+// Stepper RMT channel
+#define STEPPER_RMT_CHANNEL RMT_CHANNEL_0
 
 
 
@@ -194,7 +196,7 @@
 
 // Stepper state machine cycle time, in microseconds
 // Two cycles are required per step
-#define STEPPER_CYCLE_US 5
+#define STEPPER_CYCLE_US 3
 
 // User interface refresh rate, in Hertz
 #define UI_REFRESH_RATE_HZ 100

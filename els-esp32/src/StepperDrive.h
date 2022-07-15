@@ -30,18 +30,11 @@
 #include "Configuration.h"
 #include <stdint.h>
 #include <driver/gpio.h>
+#include <driver/rmt.h>
 
 #define GPIO_SET(pin) gpio_set_level((gpio_num_t)pin, 1)
 #define GPIO_CLEAR(pin) gpio_set_level((gpio_num_t)pin, 0)
 #define GPIO_GET(pin) gpio_get_level((gpio_num_t)pin)
-
-#ifdef INVERT_STEP_PIN
-#define GPIO_SET_STEP GPIO_CLEAR(STEP_GPIO)
-#define GPIO_CLEAR_STEP GPIO_SET(STEP_GPIO)
-#else
-#define GPIO_SET_STEP GPIO_SET(STEP_GPIO)
-#define GPIO_CLEAR_STEP GPIO_CLEAR(STEP_GPIO)
-#endif
 
 #ifdef INVERT_DIRECTION_PIN
 #define GPIO_SET_DIRECTION GPIO_CLEAR(DIRECTION_GPIO)
@@ -80,23 +73,19 @@ private:
     int64_t desiredPosition;
 
     //
-    // current state-machine state
-    // bit 0 - step signal
-    // bit 1 - direction signal
-    //
-    uint16_t state;
-
-    //
     // Is the drive enabled?
     //
     bool enabled;
 
+    TaskHandle_t* core_service_task_handle;
+
+    rmt_item32_t pulses[MAX_BUFFERED_STEPS];
+
 public:
-    StepperDrive();
+    StepperDrive(TaskHandle_t* core_service_task_handle);
     void initHardware(void);
 
     void setDesiredPosition(int64_t);
-    void incrementCurrentPosition(int32_t);
     void setCurrentPosition(int64_t);
 
     bool checkStepBacklog();
@@ -113,11 +102,6 @@ inline void StepperDrive :: setDesiredPosition(int64_t steps)
     this->desiredPosition = steps;
 }
 
-inline void StepperDrive :: incrementCurrentPosition(int32_t increment)
-{
-    this->currentPosition += increment;
-}
-
 inline void StepperDrive :: setCurrentPosition(int64_t position)
 {
     this->currentPosition = position;
@@ -125,10 +109,15 @@ inline void StepperDrive :: setCurrentPosition(int64_t position)
 
 inline bool StepperDrive :: checkStepBacklog()
 {
-    if( abs(this->desiredPosition - this->currentPosition) > MAX_BUFFERED_STEPS ) {
-        setEnabled(false);
-        return true;
+    // TODO: disable backlog detection for now as we still have a race condition
+    int64_t backlog = abs(this->desiredPosition - this->currentPosition);
+    if (backlog) {
+        printf("backlog: %lld\n", backlog);
     }
+    // if( abs(this->desiredPosition - this->currentPosition) > MAX_BUFFERED_STEPS ) {
+    //     setEnabled(false);
+    //     return true;
+    // }
     return false;
 }
 
@@ -157,47 +146,36 @@ inline bool StepperDrive :: isAlarm()
 inline void StepperDrive :: ISR(void)
 {
     if(enabled) {
-
-        switch( this->state ) {
-
-        case 0:
-            // Step = 0; Dir = 0
-            if( this->desiredPosition < this->currentPosition ) {
-                GPIO_SET_STEP;
-                this->state = 2;
-            }
-            else if( this->desiredPosition > this->currentPosition ) {
-                GPIO_SET_DIRECTION;
-                this->state = 1;
-            }
-            break;
-
-        case 1:
-            // Step = 0; Dir = 1
-            if( this->desiredPosition > this->currentPosition ) {
-                GPIO_SET_STEP;
-                this->state = 3;
-            }
-            else if( this->desiredPosition < this->currentPosition ) {
-                GPIO_CLEAR_DIRECTION;
-                this->state = 0;
-            }
-            break;
-
-        case 2:
-            // Step = 1; Dir = 0
-            GPIO_CLEAR_STEP;
-            this->currentPosition--;
-            this->state = 0;
-            break;
-
-        case 3:
-            // Step = 1; Dir = 1
-            GPIO_CLEAR_STEP;
-            this->currentPosition++;
-            this->state = 1;
-            break;
+        int64_t pulse_cnt = this->desiredPosition - this->currentPosition;
+        if (pulse_cnt == 0) {
+            return;
         }
+
+        bool reverse = (pulse_cnt < 0);
+        if (reverse) {
+            pulse_cnt = -pulse_cnt;
+        }
+
+        if (pulse_cnt > MAX_BUFFERED_STEPS) {
+            pulse_cnt = MAX_BUFFERED_STEPS;
+        }
+
+        if (reverse) {
+            this->currentPosition -= pulse_cnt;
+            GPIO_CLEAR_DIRECTION;
+        } else {
+            this->currentPosition += pulse_cnt;
+            GPIO_SET_DIRECTION;
+        }
+
+        // if RMT channel is still busy then return and wait for next cycle
+        rmt_channel_status_result_t res;
+        rmt_get_channel_status(&res);
+        if (res.status[STEPPER_RMT_CHANNEL] == rmt_channel_status_t::RMT_CHANNEL_BUSY) {
+            return;
+        }
+
+        ESP_ERROR_CHECK(rmt_write_items(STEPPER_RMT_CHANNEL, &this->pulses[0], pulse_cnt, false));
 
     } else {
         // not enabled; just keep current position in sync

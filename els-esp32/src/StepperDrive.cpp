@@ -26,25 +26,34 @@
 
 #include "StepperDrive.h"
 
+// awake core service as soon as all pulses have been sent
+// so we don't have to wait for the timer to come around
+// TODO: code is a bit ugly
+void IRAM_ATTR rmt_isr(rmt_channel_t channel, void *arg) {
+    TaskHandle_t handle = *(TaskHandle_t*) arg;
+    BaseType_t high_task_awoken = pdFALSE;
+    vTaskNotifyGiveFromISR(handle, &high_task_awoken);
+    if (high_task_awoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
 
-StepperDrive :: StepperDrive(void)
+
+StepperDrive :: StepperDrive(TaskHandle_t* core_service_task_handle)
 {
     //
     // Set up global state variables
     //
+    this->core_service_task_handle = core_service_task_handle;
     this->currentPosition = 0;
     this->desiredPosition = 0;
-
-    //
-    // State machine starts at state zero
-    //
-    this->state = 0;
 }
 
 void StepperDrive :: initHardware(void)
 {
+    // setup direction and enable pins
     gpio_config_t io_conf_output = {
-        .pin_bit_mask = (1ULL << STEP_GPIO) | (1ULL << DIRECTION_GPIO) | (1ULL << ENABLE_GPIO),
+        .pin_bit_mask = (1ULL << DIRECTION_GPIO) | (1ULL << ENABLE_GPIO),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = gpio_pullup_t::GPIO_PULLUP_DISABLE,
         .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_DISABLE,
@@ -53,6 +62,7 @@ void StepperDrive :: initHardware(void)
 
     ESP_ERROR_CHECK(gpio_config(&io_conf_output));
 
+    // setup alarm pin
     gpio_config_t io_conf_input = {
         .pin_bit_mask = (1ULL << ALARM_GPIO),
         .mode = GPIO_MODE_INPUT,
@@ -63,7 +73,30 @@ void StepperDrive :: initHardware(void)
 
     ESP_ERROR_CHECK(gpio_config(&io_conf_input));
 
-    GPIO_CLEAR_STEP;
+    // Setup RMT for step pin
+    bool invert_step = false;
+#ifdef INVERT_STEP_PIN
+    invert_step = true;
+#endif
+
+    rmt_config_t dev_config = RMT_DEFAULT_CONFIG_TX((gpio_num_t) STEP_GPIO, STEPPER_RMT_CHANNEL);
+    dev_config.clk_div = 8;
+    dev_config.tx_config.idle_level = invert_step ? RMT_IDLE_LEVEL_HIGH : RMT_IDLE_LEVEL_LOW;
+
+    ESP_ERROR_CHECK(rmt_config(&dev_config));
+    ESP_ERROR_CHECK(rmt_driver_install(STEPPER_RMT_CHANNEL, 0, 0));
+
+    uint32_t cntr_clk_hz;
+    rmt_get_counter_clock(STEPPER_RMT_CHANNEL, &cntr_clk_hz);
+    uint16_t pulse_length = cntr_clk_hz * STEPPER_CYCLE_US / 1000000;
+
+    rmt_register_tx_end_callback(rmt_isr, this->core_service_task_handle);
+
+    // init pulse
+    for (int i = 0; i < MAX_BUFFERED_STEPS; i++) {
+        this->pulses[i] = {{{pulse_length, invert_step ? 0u : 1u, pulse_length, invert_step ? 1u : 0u}}};
+    }
+
     GPIO_CLEAR_DIRECTION;
 
     setEnabled(true);
