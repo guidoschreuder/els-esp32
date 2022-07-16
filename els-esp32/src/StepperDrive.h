@@ -142,6 +142,7 @@ inline bool StepperDrive :: isAlarm()
 #endif
 }
 
+#define MIN(a,b) (a > b ? b : a)
 
 inline void StepperDrive :: ISR(void)
 {
@@ -151,20 +152,13 @@ inline void StepperDrive :: ISR(void)
             return;
         }
 
-        bool reverse = (pulse_cnt < 0);
-        if (reverse) {
-            pulse_cnt = -pulse_cnt;
-        }
-
-        if (pulse_cnt > MAX_BUFFERED_STEPS) {
-            pulse_cnt = MAX_BUFFERED_STEPS;
-        }
-
-        if (reverse) {
-            this->currentPosition -= pulse_cnt;
+        if (pulse_cnt > 0) {
+            pulse_cnt = MIN(pulse_cnt, MAX_BUFFERED_STEPS);
+            this->currentPosition += pulse_cnt;
             GPIO_CLEAR_DIRECTION;
         } else {
-            this->currentPosition += pulse_cnt;
+            pulse_cnt = MIN(-pulse_cnt, MAX_BUFFERED_STEPS);
+            this->currentPosition -= pulse_cnt;
             GPIO_SET_DIRECTION;
         }
 
