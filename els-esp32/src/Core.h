@@ -31,53 +31,47 @@
 #include "Encoder.h"
 #include "ControlPanel.h"
 #include "Tables.h"
+#include <freertos/queue.h>
 
+enum POWER {
+  OFF = 0,
+  ON = 1,
+};
+
+enum DIRECTION {
+  CW = 0,
+  CCW = 1,
+};
+
+typedef struct state_t {
+  POWER     power : 1;
+  DIRECTION direction : 1;
+  uint32_t  feed : 30;
+} state_t;
 
 class Core
 {
 private:
     Encoder *encoder;
     StepperDrive *stepperDrive;
+    QueueHandle_t state_queue;
 
-#ifdef USE_FLOATING_POINT
-#define NULL_FEED (-1)
-    float feed;
-    float previousFeed;
-#else
-#define NULL_FEED NULL
-    const FEED_THREAD *feed;
-    const FEED_THREAD *previousFeed;
-#endif // USE_FLOATING_POINT
-
-    int16_t feedDirection;
-    int16_t previousFeedDirection;
+    state_t state;
 
     int64_t feedRatio(int64_t);
-
-    bool powerOn;
 
 public:
     Core( Encoder *encoder, StepperDrive *stepperDrive );
 
-    void setFeed(const FEED_THREAD *feed);
-    void setReverse(bool reverse);
-    uint16_t getRPM(void);
-    bool isAlarm();
+    void set_state(bool, bool, const FEED_THREAD*);
 
+    uint16_t getRPM(void);
+
+    bool isAlarm();
     bool isPowerOn();
-    void setPowerOn(bool);
 
     void ISR( void );
 };
-
-inline void Core :: setFeed(const FEED_THREAD *feed)
-{
-#ifdef USE_FLOATING_POINT
-    this->feed = (float)feed->numerator / feed->denominator;
-#else
-    this->feed = feed;
-#endif // USE_FLOATING_POINT
-}
 
 inline uint16_t Core :: getRPM(void)
 {
@@ -91,40 +85,54 @@ inline bool Core :: isAlarm()
 
 inline bool Core :: isPowerOn()
 {
-    return this->powerOn;
+    return this->state.power == ON;
 }
 
 inline int64_t Core :: feedRatio(int64_t count)
 {
+    if (state.feed == 0) {
+        return 0;
+    }
+    FEED_THREAD *feed = (FEED_THREAD*) (uint64_t) state.feed;
 #ifdef USE_FLOATING_POINT
     return ((float)count) * this->feed * feedDirection;
 #else // USE_FLOATING_POINT
-    return ((long long)count) * feed->numerator / feed->denominator * feedDirection;
+    return ((long long)count) * feed->numerator / feed->denominator * (state.direction == CW ? 1 : -1);
 #endif // USE_FLOATING_POINT
 }
 
 inline void Core :: ISR( void )
 {
-    if( this->feed != NULL_FEED ) {
-        // read the encoder
-        int64_t spindlePosition = encoder->getPosition();
+    static int64_t last_enc = 0;
 
-        // calculate the desired stepper position
-        int64_t desiredSteps = feedRatio(spindlePosition);
-        stepperDrive->setDesiredPosition(desiredSteps);
+    state_t new_state;
+    bool state_received = (xQueueReceive(this->state_queue, &new_state, 0) == pdTRUE);
 
-        // if the feed or direction changed, reset sync to avoid a big step
-        if( feed != previousFeed || feedDirection != previousFeedDirection) {
-            stepperDrive->setCurrentPosition(desiredSteps);
-        }
-
-        // remember values for next time
-        previousFeedDirection = feedDirection;
-        previousFeed = feed;
-
-        // service the stepper drive state machine
-        stepperDrive->ISR();
+    state_t old_state = this->state;
+    if (!state_received && old_state.feed == 0) {
+        return;
     }
+    this->state = new_state;
+
+    // read the encoder
+    int64_t spindlePosition = encoder->getPosition();
+    if (spindlePosition < last_enc) {
+        printf("ENCODER STEP BACK FROM %lld to %lld\n", last_enc, spindlePosition);
+    }
+    last_enc = spindlePosition;
+
+    // calculate the desired stepper position
+    int64_t desiredSteps = feedRatio(spindlePosition);
+    stepperDrive->setDesiredPosition(desiredSteps);
+
+    // if the feed or direction changed, reset sync to avoid a big step
+    if(old_state.feed != this->state.feed || old_state.direction != this->state.direction) {
+        stepperDrive->setCurrentPosition(desiredSteps);
+    }
+
+    // service the stepper drive state machine
+    stepperDrive->setEnabled(this->isPowerOn());
+    stepperDrive->ISR();
 }
 
 

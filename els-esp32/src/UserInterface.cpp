@@ -87,8 +87,7 @@ UserInterface :: UserInterface(ControlPanel *controlPanel, Core *core, FeedTable
     this->keys.all = 0xff;
 
     // initialize the core so we start up correctly
-    core->setReverse(this->reverse);
-    core->setFeed(loadFeedTable());
+    core->set_state(true, this->reverse, loadFeedTable());
 
     setMessage(&STARTUP_MESSAGE_1);
 }
@@ -172,7 +171,7 @@ void UserInterface :: loop( void )
     {
         // these keys should only be sensitive when the machine is stopped
         if( keys.bit.POWER ) {
-            this->core->setPowerOn(!this->core->isPowerOn());
+            this->core->set_state(!this->core->isPowerOn(), this->reverse, this->feedTable->current());
             clearMessage();
         }
 
@@ -181,17 +180,17 @@ void UserInterface :: loop( void )
             if( keys.bit.IN_MM )
             {
                 this->metric = ! this->metric;
-                core->setFeed(loadFeedTable());
+                this->core->set_state(this->core->isPowerOn(), this->reverse, loadFeedTable());
             }
             if( keys.bit.FEED_THREAD )
             {
                 this->thread = ! this->thread;
-                core->setFeed(loadFeedTable());
+                this->core->set_state(this->core->isPowerOn(), this->reverse, loadFeedTable());
             }
             if( keys.bit.FWD_REV )
             {
                 this->reverse = ! this->reverse;
-                core->setReverse(this->reverse);
+                this->core->set_state(this->core->isPowerOn(), this->reverse, this->feedTable->current());
             }
             if( keys.bit.SET )
             {
@@ -210,11 +209,11 @@ void UserInterface :: loop( void )
             // these keys can be operated when the machine is running
             if( keys.bit.UP )
             {
-                core->setFeed(feedTable->next());
+                this->core->set_state(this->core->isPowerOn(), this->reverse, this->feedTable->next());
             }
             if( keys.bit.DOWN )
             {
-                core->setFeed(feedTable->previous());
+                this->core->set_state(this->core->isPowerOn(), this->reverse, this->feedTable->previous());
             }
         }
 
