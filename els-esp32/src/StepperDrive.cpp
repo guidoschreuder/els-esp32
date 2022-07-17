@@ -26,25 +26,11 @@
 
 #include "StepperDrive.h"
 
-// awake core service as soon as all pulses have been sent
-// so we don't have to wait for the timer to come around
-// TODO: code is a bit ugly
-void IRAM_ATTR rmt_isr(rmt_channel_t channel, void *arg) {
-    TaskHandle_t handle = *(TaskHandle_t*) arg;
-    BaseType_t high_task_awoken = pdFALSE;
-    vTaskNotifyGiveFromISR(handle, &high_task_awoken);
-    if (high_task_awoken == pdTRUE) {
-        portYIELD_FROM_ISR();
-    }
-}
-
-
-StepperDrive :: StepperDrive(TaskHandle_t* core_service_task_handle)
+StepperDrive :: StepperDrive(void)
 {
     //
     // Set up global state variables
     //
-    this->core_service_task_handle = core_service_task_handle;
     this->currentPosition = 0;
     this->desiredPosition = 0;
 }
@@ -89,8 +75,6 @@ void StepperDrive :: initHardware(void)
     uint32_t cntr_clk_hz;
     rmt_get_counter_clock(STEPPER_RMT_CHANNEL, &cntr_clk_hz);
     uint16_t pulse_length = cntr_clk_hz * STEPPER_CYCLE_US / 1000000;
-
-    rmt_register_tx_end_callback(rmt_isr, this->core_service_task_handle);
 
     // init pulse
     for (int i = 0; i < MAX_BUFFERED_STEPS; i++) {

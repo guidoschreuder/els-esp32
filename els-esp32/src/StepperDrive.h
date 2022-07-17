@@ -77,12 +77,10 @@ private:
     //
     bool enabled;
 
-    TaskHandle_t* core_service_task_handle;
-
     rmt_item32_t pulses[MAX_BUFFERED_STEPS];
 
 public:
-    StepperDrive(TaskHandle_t* core_service_task_handle);
+    StepperDrive();
     void initHardware(void);
 
     void setDesiredPosition(int64_t);

@@ -65,7 +65,7 @@ ControlPanel controlPanel;
 Encoder encoder;
 
 // Stepper driver
-StepperDrive stepperDrive(&core_service_task_handle);
+StepperDrive stepperDrive;
 
 // Core engine
 Core core(&encoder, &stepperDrive);
