@@ -31,14 +31,14 @@ Core :: Core( Encoder *encoder, StepperDrive *stepperDrive )
 {
     this->encoder = encoder;
     this->stepperDrive = stepperDrive;
-    this->state_queue = xQueueCreate(10, sizeof(state_t));
+    this->state_queue = xQueueCreate(1, sizeof(state_t));
 
     this->state = {ON, CW, 0};
 }
 
 void Core :: set_state(bool on, bool reverse, const FEED_THREAD* feed) {
     state_t new_state = {on ? ON : OFF, reverse ? CW : CCW, (uint32_t) feed};
-    xQueueGenericSend(this->state_queue, &new_state, 0, queueSEND_TO_BACK);
+    xQueueOverwrite(this->state_queue, &new_state);
 }
 
 
