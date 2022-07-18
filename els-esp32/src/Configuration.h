@@ -191,6 +191,9 @@
 // to touch these settings.
 //================================================================================
 
+// Core service CPU
+#define CORE_SERVICE_CPU_CORE APP_CPU_NUM
+
 // Frequency of main control loop
 #define CONTROL_FREQ_HZ 20000
 

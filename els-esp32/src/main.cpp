@@ -132,7 +132,7 @@ void app_main()
     xTaskCreate(&ui_task, "ui_task", 2048, NULL, 4, NULL);
 
     // create core service task
-    xTaskCreatePinnedToCore(core_service_task, "core_service_task", 4096, NULL, configMAX_PRIORITIES - 1, &core_service_task_handle, APP_CPU_NUM);
+    xTaskCreatePinnedToCore(core_service_task, "core_service_task", 4096, NULL, configMAX_PRIORITIES - 1, &core_service_task_handle, CORE_SERVICE_CPU_CORE);
 
     // create core service hardware timer
     timer_config_t config = {
