@@ -32,12 +32,14 @@
 Encoder :: Encoder( void )
 {
     this->previous = 0;
+    this->previous_us = 0;
     this->rpm = 0;
 }
 
 void Encoder :: initHardware(void)
 {
     ESP32Encoder::useInternalWeakPullResistors = UP;
+    ESP32Encoder::isrServiceCpuCore = CORE_SERVICE_CPU_CORE;
     encoder.attachFullQuad(ENCODER_A_GPIO, ENCODER_B_GPIO);
 }
 
