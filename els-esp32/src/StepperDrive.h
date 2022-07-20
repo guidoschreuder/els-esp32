@@ -107,15 +107,10 @@ inline void StepperDrive :: setCurrentPosition(int64_t position)
 
 inline bool StepperDrive :: checkStepBacklog()
 {
-    // TODO: disable backlog detection for now as we still have a race condition
-    int64_t backlog = abs(this->desiredPosition - this->currentPosition);
-    if (backlog) {
-        printf("backlog: %lld\n", backlog);
+    if( abs(this->desiredPosition - this->currentPosition) > MAX_BUFFERED_STEPS ) {
+        setEnabled(false);
+        return true;
     }
-    // if( abs(this->desiredPosition - this->currentPosition) > MAX_BUFFERED_STEPS ) {
-    //     setEnabled(false);
-    //     return true;
-    // }
     return false;
 }
 
