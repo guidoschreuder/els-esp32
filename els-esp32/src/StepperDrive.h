@@ -75,7 +75,7 @@ private:
     //
     // Is the drive enabled?
     //
-    bool enabled;
+    volatile bool enabled;
 
     rmt_item32_t pulses[MAX_BUFFERED_STEPS];
 
