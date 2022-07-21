@@ -29,11 +29,11 @@
 #include "Configuration.h"
 
 
-Encoder :: Encoder( void )
+Encoder :: Encoder( void ) :
+  previous{0},
+  previous_us{0},
+  rpm{0}
 {
-    this->previous = 0;
-    this->previous_us = 0;
-    this->rpm = 0;
 }
 
 void Encoder :: initHardware(void)
@@ -48,7 +48,7 @@ uint16_t Encoder :: getRPM(void)
     int64_t current_us = esp_timer_get_time();
 
     if (current_us > previous_us + (1000000 / RPM_CALC_RATE_HZ)) {
-      int64_t current = encoder.getCount();
+      int64_t current = this->getPosition();
       int64_t count = (current > previous) ? current - previous : previous - current;
 
       rpm = count * 60 * RPM_CALC_RATE_HZ / ENCODER_RESOLUTION;
