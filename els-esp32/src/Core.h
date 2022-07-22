@@ -101,25 +101,22 @@ inline int64_t Core :: feedRatio(int64_t count)
 #endif // USE_FLOATING_POINT
 }
 
+#define SIGN(x) ((x > 0) - (x < 0))
+
 inline void Core :: ISR( void )
 {
-    static int64_t last_enc = 0;
-
     state_t new_state;
     bool state_received = (xQueueReceive(this->state_queue, &new_state, 0) == pdTRUE);
 
-    state_t old_state = this->state;
-    if (!state_received && old_state.feed == 0) {
+    if (!state_received && this->state.feed == 0) {
         return;
     }
+
+    state_t old_state = this->state;
     this->state = new_state;
 
     // read the encoder
     int64_t spindlePosition = encoder->getPosition();
-    if (spindlePosition < last_enc) {
-        printf("ENCODER STEP BACK FROM %lld to %lld\n", last_enc, spindlePosition);
-    }
-    last_enc = spindlePosition;
 
     // calculate the desired stepper position
     int64_t desiredSteps = feedRatio(spindlePosition);
