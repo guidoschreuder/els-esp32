@@ -26,13 +26,11 @@
 
 #include "StepperDrive.h"
 
-StepperDrive :: StepperDrive(void)
+StepperDrive :: StepperDrive(void) :
+  currentPosition{0},
+  desiredPosition{0},
+  enabled{false}
 {
-    //
-    // Set up global state variables
-    //
-    this->currentPosition = 0;
-    this->desiredPosition = 0;
 }
 
 void StepperDrive :: initHardware(void)
