@@ -52,9 +52,6 @@ static TaskHandle_t core_service_task_handle;
 // Declare all of the main components and wire them together
 //
 
-// Debug harness
-Debug debug;
-
 // Feed table factory
 FeedTableFactory feedTableFactory;
 
@@ -80,26 +77,28 @@ static bool IRAM_ATTR core_service_timer_isr_callback(void* args) {
 }
 
 void core_service_task(void *pvParameter) {
+    Debug debug(DEBUG1_GPIO);
     for (;;) {
         // if(xSemaphoreTake(timer_sem, portMAX_DELAY) == pdTRUE) {
         if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
             // flag entrance to ISR for timing
-            debug.begin1();
+            debug.begin();
 
             // service the Core engine ISR, which in turn services the StepperDrive ISR
             core.ISR();
 
             // flag exit from ISR for timing
-            debug.end1();
+            debug.end();
         }
     }
 }
 
 void ui_task(void *pvParameter) {
     // User interface loop
+    Debug debug(DEBUG2_GPIO);
     for(;;) {
         // mark beginning of loop for debugging
-        debug.begin2();
+        debug.begin();
 
         // check for step backlog and panic the system if it occurs
         if( stepperDrive.checkStepBacklog() ) {
@@ -110,7 +109,7 @@ void ui_task(void *pvParameter) {
         userInterface.loop();
 
         // mark end of loop for debugging
-        debug.end2();
+        debug.end();
 
         // delay
         vTaskDelay(pdMS_TO_TICKS(1000 / UI_REFRESH_RATE_HZ));
@@ -123,7 +122,6 @@ void ui_task(void *pvParameter) {
 void app_main()
 {
     // Initialize peripherals and pins
-    debug.initHardware();
     controlPanel.initHardware();
     stepperDrive.initHardware();
     encoder.initHardware();

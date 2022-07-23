@@ -27,17 +27,11 @@
 #include "Debug.h"
 
 
-Debug :: Debug( void )
+Debug :: Debug( int pin_) :
+  pin{(gpio_num_t)pin_}
 {
-
-}
-
-
-void Debug :: initHardware( void )
-{
-  // set up GPIO pins as output for debugging
   gpio_config_t io_conf_debug = {
-      .pin_bit_mask = (1ULL << DEBUG1_GPIO) | (1ULL << DEBUG2_GPIO),
+      .pin_bit_mask = (1ULL << pin),
       .mode = GPIO_MODE_OUTPUT,
       .pull_up_en = gpio_pullup_t::GPIO_PULLUP_DISABLE,
       .pull_down_en = gpio_pulldown_t::GPIO_PULLDOWN_ENABLE,

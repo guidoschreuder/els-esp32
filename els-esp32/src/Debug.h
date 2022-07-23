@@ -32,38 +32,23 @@
 class Debug
 {
 public:
-    Debug(void);
-    void initHardware(void);
+    Debug(int);
 
-    // analyzer pin 1
-    void begin1( void );
-    void end1( void );
-
-    // analyzer pin 2
-    void begin2( void );
-    void end2( void );
+    void begin(void);
+    void end(void);
+private:
+    gpio_num_t pin;
 };
 
 
-inline void Debug :: begin1( void )
+inline void Debug :: begin()
 {
-    gpio_set_level((gpio_num_t)DEBUG1_GPIO, 1);
+    gpio_set_level(pin, 1);
 }
 
-inline void Debug :: end1( void )
+inline void Debug :: end()
 {
-    gpio_set_level((gpio_num_t)DEBUG1_GPIO, 0);
+    gpio_set_level(pin, 0);
 }
-
-inline void Debug :: begin2( void )
-{
-    gpio_set_level((gpio_num_t)DEBUG2_GPIO, 1);
-}
-
-inline void Debug :: end2( void )
-{
-    gpio_set_level((gpio_num_t)DEBUG2_GPIO, 0);
-}
-
 
 #endif // __DEBUG_H
