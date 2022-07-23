@@ -122,13 +122,15 @@ inline void Core :: ISR( void )
     int64_t desiredSteps = feedRatio(spindlePosition);
     stepperDrive->setDesiredPosition(desiredSteps);
 
+    if (old_state.power != this->state.power) {
+        stepperDrive->setEnabled(this->isPowerOn());
+    }
     // if the feed or direction changed, reset sync to avoid a big step
     if(old_state.feed != this->state.feed || old_state.direction != this->state.direction) {
         stepperDrive->setCurrentPosition(desiredSteps);
     }
 
     // service the stepper drive state machine
-    stepperDrive->setEnabled(this->isPowerOn());
     stepperDrive->ISR();
 }
 
