@@ -95,9 +95,9 @@ public:
     void ISR(void);
 };
 
-inline void StepperDrive :: setDesiredPosition(int64_t steps)
+inline void StepperDrive :: setDesiredPosition(int64_t position)
 {
-    this->desiredPosition = steps;
+    this->desiredPosition = position;
 }
 
 inline void StepperDrive :: setCurrentPosition(int64_t position)
