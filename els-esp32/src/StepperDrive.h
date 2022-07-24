@@ -156,6 +156,7 @@ inline void StepperDrive :: ISR(void)
         }
 
         // if RMT channel is still busy then return and wait for next cycle
+        // TODO: this seems to be faster than `rmt_wait_tx_done` but might need further testing
         rmt_channel_status_result_t res;
         rmt_get_channel_status(&res);
         if (res.status[STEPPER_RMT_CHANNEL] == rmt_channel_status_t::RMT_CHANNEL_BUSY) {
