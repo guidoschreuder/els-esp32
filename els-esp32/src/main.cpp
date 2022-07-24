@@ -81,7 +81,6 @@ static bool IRAM_ATTR core_service_timer_isr_callback(void* args) {
 
 void core_service_task(void *pvParameter) {
     for (;;) {
-        // if(xSemaphoreTake(timer_sem, portMAX_DELAY) == pdTRUE) {
         if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
             // flag entrance to ISR for timing
             debug.begin1();
