@@ -1,3 +1,15 @@
 .pio
 .vscode
 platformio-device-monitor-*
+
+*.bck
+*.kicad_pcb-bak
+*.net
+*.sch-bak
+
+_autosave-*
+
+gerber
+gerber.zip
+
+temp
