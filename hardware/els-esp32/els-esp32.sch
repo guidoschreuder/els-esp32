@@ -253,6 +253,7 @@ F 0 "U1" H 1800 4092 50  0000 C CNN
 F 1 "AMS1117-3.3" H 1800 4001 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-223-3_TabPin2" H 1800 4050 50  0001 C CNN
 F 3 "http://www.advanced-monolithic.com/pdf/ds1117.pdf" H 1900 3600 50  0001 C CNN
+F 4 "C6186" H 1800 3850 50  0001 C CNN "LCSC"
 	1    1800 3850
 	1    0    0    -1  
 $EndComp
@@ -649,6 +650,7 @@ F 0 "Q7" H 4741 4196 50  0000 L CNN
 F 1 "MMBT3904" H 4741 4105 50  0000 L CNN
 F 2 "Package_TO_SOT_SMD:SOT-23" H 4750 4075 50  0001 L CIN
 F 3 "https://www.onsemi.com/pub/Collateral/2N3903-D.PDF" H 4550 4150 50  0001 L CNN
+F 4 "C20526" H 4550 4150 50  0001 C CNN "LCSC"
 	1    4550 4150
 	1    0    0    -1  
 $EndComp
@@ -660,6 +662,7 @@ F 0 "Q8" H 4741 4896 50  0000 L CNN
 F 1 "MMBT3904" H 4741 4805 50  0000 L CNN
 F 2 "Package_TO_SOT_SMD:SOT-23" H 4750 4775 50  0001 L CIN
 F 3 "https://www.onsemi.com/pub/Collateral/2N3903-D.PDF" H 4550 4850 50  0001 L CNN
+F 4 "C20526" H 4550 4850 50  0001 C CNN "LCSC"
 	1    4550 4850
 	1    0    0    -1  
 $EndComp
