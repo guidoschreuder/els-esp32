@@ -664,7 +664,7 @@ F 2 "Package_TO_SOT_SMD:SOT-23" H 4750 4775 50  0001 L CIN
 F 3 "https://www.onsemi.com/pub/Collateral/2N3903-D.PDF" H 4550 4850 50  0001 L CNN
 F 4 "C20526" H 4550 4850 50  0001 C CNN "LCSC"
 	1    4550 4850
-	1    0    0    -1  
+	1    0    0    1   
 $EndComp
 $Comp
 L Connector:TestPoint TP3
